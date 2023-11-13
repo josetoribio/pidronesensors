@@ -45,18 +45,21 @@ class OpticalFlowNode(object):
             # topic: /pidrone/picamera/twist
             # note: ensure that you pass in the argument queue_size=1 to the
             #       publisher to avoid lag
+        twist_pub = rospy.Publisher("/pidrone/picamera/twist",TwistStamped,queue_size=1)
+
+
         # Subscriber:
         # TODO: subscribe to /pidrone/range to extract altitude (z position) for
         #       scaling
             # message type: Range
             # callback method: altitude_cb
-
+        range_sub = rospy.Subcriber("/pidrone/range",Range,altitude_cb)
 
         # TODO: subscribe to /raspicam_node/motion_vectors to extract the flow vectors for estimating velocity.
             # message type: MotionVectors
             # callback method: motion_cb
 
-
+        MotionVectors_sub = rospy.Subcriber("/raspicam_node/motion_vectors",MotionVectors,motion_cb)
 
 
     def motion_cb(self, msg):
@@ -70,8 +73,8 @@ class OpticalFlowNode(object):
         # calculate the planar and yaw motions
 
         # TODO: calculate the optical flow velocities by summing the flow vectors
-        opflow_x = ??? 
-        opflow_y = ??? 
+        opflow_x =  np.sum(x)
+        opflow_y = np.sum(y)
 
         
         x_motion = opflow_x * self.flow_coeff * self.altitude
@@ -81,7 +84,11 @@ class OpticalFlowNode(object):
         # TODO: Create a TwistStamped message, fill in the values you've calculated,
         #       and publish this using the publisher you've created in setup
 
-
+        Twist_msg = TwistStamped()
+        Twist.msg.header.stamp = rospy.Time.now()
+        Twist_msg.twist.linear.x = x_motion
+        Twist_msg.twist.linear.y = -y_motion
+        
 
         
         duration_from_last_altitude = rospy.Time.now() - self.altitude_ts
@@ -96,8 +103,8 @@ class OpticalFlowNode(object):
             msg:  the message publishing the altitude
 
         """
-        self.altitude = ??
-        self.altitude_ts = ??
+        self.altitude = msg.range
+        self.altitude_ts = msg.header.stamp
     
 def main():
     optical_flow_node = OpticalFlowNode("optical_flow_node")
